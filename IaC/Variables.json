@@ -1,0 +1,64 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "location": {
+          "value": "eastus2"
+      },
+      "resourceGroupName": {
+          "value": "rg-aplicaciondocker-cicd-iac"
+      },   
+      "prefix":{
+        "value": "dev"
+      },
+      "clusterName": {
+          "value": "dockerappcicdiac"
+      },
+      "kubernetesVersion": {
+          "value": "1.24.9"
+      },
+      "nodeVmSize": {
+          "value": "Standard_DS2_v2"
+      },
+      "nodeCount": {
+        "value": 2
+      },
+      "maxNodeCount": {
+        "value": 5
+      },
+      "nodePoolName": {
+        "value": "linux1"
+      },      
+      "osDiskSizeGB": {
+        "value": 128
+      },
+      "enableAutoScaling": {
+        "value": true
+      },
+      "acrName": {
+        "value": "acrappcicdiac"
+      },
+      "networkPlugin": {
+        "value": "azure"
+      },
+      "serviceCidr": {
+        "value": "100.70.0.0/16"
+      },
+      "dnsServiceIP": {
+        "value": "100.70.0.10"
+      },
+      "dockerBridgeCidr": {
+        "value": "100.71.0.1/16"
+      },
+      "vnetName": {
+        "value": "data-vnet-ppal"
+      },
+      "subnetName": {
+        "value": "subnet-app"
+      },
+      "resourceGroupNet": {
+        "value": "rg-networking-dev"
+      }
+    }
+  }
+

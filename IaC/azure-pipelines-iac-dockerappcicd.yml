@@ -1,0 +1,47 @@
+
+name: Deploy Bicep files
+trigger:
+- master
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  location: 'eastus2'
+  templateFile: 'main.bicep'
+  parametersFile: 'Variables.json'
+
+stages:
+  - stage: ValidateTemplates
+    jobs:
+      - job: ValidateBicep
+        continueOnError: false
+        steps:
+          - task: AzureCLI@2
+            displayName: Validar Plantillas de Bicep
+            inputs:
+              azureSubscription: 'artele colombia dev (09b166a6-ea72-459f-96b2-85a3e880939d)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                az --version
+                az deployment sub what-if --location $(location) \
+                   --template-file $(templateFile) \
+                   --parameters $(parametersFile)
+  - stage: DeployTemplates
+    condition: succeeded('validateTemplates')
+    dependsOn: validateTemplates
+    jobs:
+      - job: DeployBicep
+        steps:
+          - task: AzureCLI@2
+            displayName: Desplegar Plantillas de Bicep
+            inputs:
+              azureSubscription: 'artele colombia dev (09b166a6-ea72-459f-96b2-85a3e880939d)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                az --version
+                az deployment sub create --location $(location) \
+                   --template-file $(templateFile) \
+                   --parameters $(parametersFile)

@@ -1,0 +1,96 @@
+trigger:
+- master
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  tag: 'latest'
+  imagePullSecret: 'secretnameaks'
+  imageRepository: 'acrappcicdiac'
+  containerRegistry: 'acrappcicdiac.azurecr.io'
+
+stages:
+  - stage: BuildPushDockerImage
+    displayName: Construir y Subir la imagen
+    jobs:
+      - job: BuildImage
+        displayName: Compilar y Subir Imagen de Docker
+        continueOnError: false
+        steps:
+          - task: Docker@2
+            displayName: Compilar y subir la imagen al ACR
+            inputs:
+              containerRegistry: 'ACR Service Connection'
+              repository: '$(imageRepository)'
+              command: 'buildAndPush'
+              Dockerfile: '$(Build.SourcesDirectory)/app/Dockerfile'
+              tags: |
+                $(tag)
+          - task: PublishPipelineArtifact@1
+            displayName: Publicar Artifact Manifiestos
+            inputs:
+              targetPath: '$(Pipeline.Workspace)/s/manifests'
+              artifact: 'manifests'
+              publishLocation: 'pipeline'
+  - stage: DeployToKubernetes
+    displayName: Despliegue a AKS
+    condition: succeeded('BuildPushDockerImage')
+    dependsOn: BuildPushDockerImage
+    jobs:
+      - job: AprroveDeploy
+        displayName: Intervención manual.
+        timeoutInMinutes: 4320
+        pool: server
+        steps:
+          - task: ManualValidation@0
+            displayName: Aprobacion
+            inputs:
+              notifyUsers: 'artelecloud@outlook.com'
+              instructions: 'Por favor revisar y aprobar el deployment.'
+      - deployment: DeploymentJob
+        displayName: Despliegue hacia AKS
+        environment: 'EnvToAks.default' #Creado en Azure Pipelines>Environment
+        strategy:
+          runOnce:
+            deploy:
+             steps:
+               - task: DownloadPipelineArtifact@2
+                 displayName: Descargar Artifact Manifiestos
+                 inputs:
+                   buildType: 'current'
+                   artifactName: 'manifests'
+                   targetPath: '$(Pipeline.Workspace)/manifests'
+               - task: KubernetesManifest@1
+                 displayName: Crear Secreto
+                 inputs:
+                   action: 'createSecret'
+                   connectionType: 'azureResourceManager'
+                   azureSubscriptionConnection: 'your subscription (xxxxxx-xxxx-xxxxxx-xxxxxx-xxxxxx)'
+                   azureResourceGroup: 'rg-aplicaciondocker-cicd-iac'
+                   kubernetesCluster: 'dockerappcicdiac'
+                   namespace: 'default'
+                   secretType: 'dockerRegistry'
+                   secretName: '$(imagePullSecret)'
+                   dockerRegistryEndpoint: 'ACR Service Connection'
+               - task: KubernetesManifest@1
+                 displayName: Despliegue de Aplicacion en AKS
+                 inputs:
+                   action: 'deploy'
+                   connectionType: 'azureResourceManager'
+                   azureSubscriptionConnection: 'your subscription (xxxxxx-xxxx-xxxxxx-xxxxxx-xxxxxx)'
+                   azureResourceGroup: 'rg-aplicaciondocker-cicd-iac'
+                   kubernetesCluster: 'dockerappcicdiac'
+                   namespace: 'default'
+                   manifests: |
+                     $(Pipeline.Workspace)/manifests/deployment.yml
+                     $(Pipeline.Workspace)/manifests/service.yml
+                   containers: '$(containerRegistry)/$(imageRepository):$(tag)'
+                   imagePullSecrets: '$(imagePullSecret)'
+                   rolloutStatusTimeout: '30'
+               
+               
+               
+
+               
+               

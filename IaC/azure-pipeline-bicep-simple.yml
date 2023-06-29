@@ -1,0 +1,38 @@
+name: Deploy Bicep files
+trigger:
+- master
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  location: 'eastus2'
+  webAppName: 'NodeDockerAppCICD'
+  templateFile: 'main.bicep'
+  parametersFile: 'Variables.json'
+
+  
+steps:
+
+- task: AzureCLI@2
+  displayName: Preview Bicep Changes
+  inputs:
+    azureSubscription: 'artele colombia dev (09b166a6-ea72-459f-96b2-85a3e880939d)'
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      az --version
+      az deployment sub what-if --location $(location) \
+         --template-file $(templateFile) \
+         --parameters $(parametersFile)
+
+- task: AzureCLI@2
+  displayName: Deploy Bicep To Azure
+  inputs:
+    azureSubscription: 'artele colombia dev (09b166a6-ea72-459f-96b2-85a3e880939d)'
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      az deployment sub create --location $(location) \
+         --template-file $(templateFile) \
+         --parameters $(parametersFile)
